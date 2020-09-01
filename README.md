@@ -27,7 +27,7 @@ Example publisher and subscriber are written in publisher.js and subscriber.js r
 To handle failure of nodes in cluster during pubsub, I basically subscribed to the channel on each node. \
 Publisher still publishes to on availabe redis node in cluster and then internally node passes it on to other nodes on gossip channel.\
 
-This is not very scalable as subscribes are way more than need. \
+This is not very scalable as subscribes are way more than needed. \
 Ideally there should be a service discovery which keeps track of available redis nodes. and client talks to this service discovery to get available node to subscribe to channels. Some other methods can also be used. I just created a bare minimum.
 
 This client doesnt handle redis features other than pubsub(like get, set..), but cluster will support redis features with any other clients like 'ioredis'
