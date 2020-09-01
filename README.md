@@ -10,6 +10,7 @@ I used latest redis image,without redis-sentinel. \
 sentinel can be used for master-slave leader election and quorum, \
 bitnami redis-cluster images are also good alternative.
 
+on running .sh create script it will echo all the redis node IPs and ports but below can be used to find them later\
 Below should fetch the IP of redis-node-1, to fetch ip if other nodes replace the node-name like redis-node-2 \
 ``docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' redis-node-1  
 ``\
