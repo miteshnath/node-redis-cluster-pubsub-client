@@ -17,7 +17,7 @@ let i = 0;
 while (true) {
   i = i + 1;
   redis_pubsub.publish("my_test_channel", i.toString());
-  if (i === 2) {
+  if (i === 20) {
     break;
   }
 }

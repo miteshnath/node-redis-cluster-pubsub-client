@@ -11,8 +11,8 @@ var redis_pubsub = require("./index")({
   ],
 });
 
-redis_pubsub.on("message", function (channel, message) {
-  console.log(channel, message);
+redis_pubsub.on("message", function (message) {
+  console.log(message);
 });
 
 redis_pubsub.subscribe("my_test_channel");

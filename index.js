@@ -56,7 +56,7 @@ function RedisClientWrapper(options) {
     setImmediate(function () {
       redis_clients.forEach(function (client) {
         client.subscribe(channel);
-        client.on("message", function (message) {
+        client.on("message", function (channel, message) {
           emitter.emit("message", message);
         });
       });
