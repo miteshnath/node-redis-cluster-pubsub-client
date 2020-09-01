@@ -2,7 +2,7 @@
 This repo contains basic nodejs pubsub client for redis cluster 
 
 
-# Assumptions: A linux system with docker is provided. 
+Assumptions: A linux system with docker is provided. \
 To get the clusters up and runing, make the `create-redis-cluster.sh` and run the sh file.\
 It is currently configured to start 3 redis containers and setup handshake protocols b/w them to form a cluster. 
 Docker compose can also be used for this setup. \
