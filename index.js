@@ -16,7 +16,7 @@ function RedisClientWrapper(options) {
 
   var $ = this;
   var nodes = options.nodes;
-  var redisClients = [];
+  var redisClients = []; //active_nodes
   var emitter = new EventEmitter();
   var subscriber = null;
   var nextSubscriber = null;
@@ -27,12 +27,14 @@ function RedisClientWrapper(options) {
     let client = options.createClient(node.host, node.port);
     redisClients.push(client);
     client.on("ready", function () {
-      console.log("inside node ready : ", node.host);
+      console.log("ready: ", node.host);
       client.__ready__ = true;
     });
 
     client.on("error", function () {
+      // remove the dead redis from active_nodes
       const index = redisClients.indexOf(client);
+      console.log("error : ", client.options.host);
       if (index > -1) {
         redisClients.splice(index, 1);
       }
@@ -46,11 +48,14 @@ function RedisClientWrapper(options) {
         subscriber = client;
         subscriber.on("ready", function () {
           if (nextSubscriber) {
+            // unsubscribe since the original node is up again
             nextSubscriber.unsubscribe(channel);
+            console.log("channel %s removed from node %s", channel, nextSubscriber.options.host)
             nextSubscriber = null;
           }
         });
         subscriber.subscribe(channel);
+        console.log("channel %s on node %s", channel, subscriber.options.host)
         subscriber.on("message", function (channel, message) {
           emitter.emit("message", message);
         });
@@ -58,11 +63,12 @@ function RedisClientWrapper(options) {
         subscriber.on("error", function (error) {
           if (redisClients.length > 0) {
             client = getSuitableRedisClient(channel);
-            console.log(client.options.host, subscriber.options.host);
-            console.log("inside");
+            console.log("active clients : %s", redisClients.length);
             if (!nextSubscriber) {
               nextSubscriber = client;
+              // original node seems done, so subscribe on new node
               nextSubscriber.subscribe(channel);
+              console.log("channel %s moved node %s", channel, nextSubscriber.options.host)
               nextSubscriber.on("message", function (channel, message) {
                 emitter.emit("message", message);
               });
@@ -75,12 +81,12 @@ function RedisClientWrapper(options) {
 
   $.publish = function (channel, message) {
     let redisPub = getSuitableRedisClient(channel);
-    console.log("publisher: ", redisPub.options.host);
+    console.log("publisher node : ", redisPub.options.host);
     publisher = redisPub;
     if (redisPub) {
       redisPub.once("ready", function () {
         publisher.publish(channel, message);
-        console.log("published: ", publisher.options.host);
+        console.log("published to node : ", publisher.options.host);
       });
       redisPub.once("error", function (error) {
         let nextRedisPub = getSuitableRedisClient(channel);
@@ -88,7 +94,7 @@ function RedisClientWrapper(options) {
           publisher = nextRedisPub;
         }
         publisher.publish(channel, message);
-        console.log("published: ", nextRedisPub.options.host);
+        console.log("published to node : ", nextRedisPub.options.host);
       });
     }
   };
@@ -102,6 +108,7 @@ function RedisClientWrapper(options) {
   };
 
   function getSuitableRedisClient(channel) {
+    // basically length of channel string modulus number of active node as hash function to select correct node.
     let selectedNode = channel.length % redisClients.length;
     console.log(
       "redisClients length, channel length: ",
