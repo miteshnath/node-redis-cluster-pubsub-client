@@ -18,58 +18,90 @@ function RedisClientWrapper(options) {
 
   var nodes = options.nodes;
 
-  var redis_clients = [];
+  var redisClients = [];
 
   var emitter = new EventEmitter();
 
-  var first_available, redisPub;
+  var subscriber = null;
+
+  var nextSubscriber = null;
+
+  var publisher = null;
+
+  var lastMessage = null;
 
   nodes.forEach(function (node) {
-    var redisClient = options.createClient(node.host, node.port);
-
-    redis_clients.push(redisClient);
-
-    redisClient.on("ready", function () {
-      redisClient.__ready__ = true;
-      if (!first_available) {
-        first_available = redisClient;
-      }
+    console.log("node: ", node);
+    let client = options.createClient(node.host, node.port);
+    redisClients.push(client);
+    client.on("ready", function () {
+      console.log("inside node ready : ", node.host);
+      client.__ready__ = true;
     });
 
-    redisClient.on("error", function () {
-      console.log("nodes: ", nodes);
-      console.log("---------------");
-
-      const index = redis_clients.indexOf(redisClient);
+    client.on("error", function () {
+      const index = redisClients.indexOf(client);
       if (index > -1) {
-        redis_clients.splice(index, 1);
-      }
-
-      const idx = nodes.indexOf(node);
-      if (idx > -1) {
-        nodes.splice(idx, 1);
+        redisClients.splice(index, 1);
       }
     });
   });
 
   $.subscribe = function (channel) {
     setImmediate(function () {
-      redis_clients.forEach(function (client) {
-        client.subscribe(channel);
-        client.on("message", function (channel, message) {
+      let client = getSuitableRedisClient(channel);
+      if (client) {
+        subscriber = client;
+        subscriber.on("ready", function () {
+          if (nextSubscriber) {
+            nextSubscriber.unsubscribe(channel);
+            nextSubscriber = null;
+          }
+        });
+        subscriber.subscribe(channel);
+        subscriber.on("message", function (channel, message) {
           emitter.emit("message", message);
         });
-      });
+
+        subscriber.on("error", function (error) {
+          if (redisClients.length > 0) {
+            client = getSuitableRedisClient(channel);
+            console.log(client.options.host, subscriber.options.host);
+            console.log("inside");
+            if (!nextSubscriber) {
+              nextSubscriber = client;
+              nextSubscriber.subscribe(channel);
+              nextSubscriber.on("message", function (channel, message) {
+                emitter.emit("message", message);
+              });
+            }
+          }
+        });
+      }
     });
   };
 
   $.publish = function (channel, message) {
-    console.log(channel, message)
-    if (!redisPub) {
-      redisPub = getFirstAvailableRedisClient();
+    let redisPub = getSuitableRedisClient(channel);
+    console.log("publisher: ", redisPub.options.host);
+    publisher = redisPub;
+    if (redisPub) {
+      redisPub.once("ready", function () {
+        // if (publisher && publisher.options.host !== redisPub.options.host) {
+        //   publisher = redisPub
+        // }
+        publisher.publish(channel, message);
+        console.log("published: ", publisher.options.host);
+      });
+      redisPub.once("error", function (error) {
+        let nextRedisPub = getSuitableRedisClient(channel);
+        if ((nextRedisPub, options.host !== publisher.options.host)) {
+          publisher = nextRedisPub;
+        }
+        publisher.publish(channel, message);
+        console.log("published: ", nextRedisPub.options.host);
+      });
     }
-
-    redisPub.publish(channel, message);
   };
 
   $.on = function (event, callback) {
@@ -80,10 +112,15 @@ function RedisClientWrapper(options) {
     }
   };
 
-  function getFirstAvailableRedisClient() {
-    for (let i = 0; i < redis_clients.length; i++) {
-      return redis_clients[i];
-    }
+  function getSuitableRedisClient(channel) {
+    let selectedNode = channel.length % redisClients.length;
+    console.log(
+      "redisClients length, channel length: ",
+      redisClients.length,
+      channel.length
+    );
+
+    return redisClients[selectedNode];
   }
 }
 

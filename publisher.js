@@ -2,7 +2,6 @@ var redis_pubsub = require("./index")({
   createClient: function (host, port) {
     // pass a redis client
     var redis = require("redis"); // only clients with the same method signatures
-
     return redis.createClient(port, host);
   },
   nodes: [
@@ -13,11 +12,6 @@ var redis_pubsub = require("./index")({
   ],
 });
 
-let i = 0;
-while (true) {
-  i = i + 1;
-  redis_pubsub.publish("my_test_channel", i.toString());
-  if (i === 20) {
-    break;
-  }
-}
+
+redis_pubsub.publish("my_test_channel", "greetings from publisher");
+redis_pubsub.publish("my_test_channel", "hope you are great");

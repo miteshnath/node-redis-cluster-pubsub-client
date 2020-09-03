@@ -18,5 +18,10 @@ echo "REDIS_NODE_IP_1:  " $REDIS_NODE_IP_1 "PORT 8001"
 echo "REDIS_NODE_IP_2:  " $REDIS_NODE_IP_2 "PORT 8002" 
 echo "REDIS_NODE_IP_3:  " $REDIS_NODE_IP_3 "PORT 8003" 
 
-redis-cli -h $REDIS_NODE_IP_1 -p 8001 cluster meet $REDIS_NODE_IP_2 8002
-redis-cli -h $REDIS_NODE_IP_1 -p 8001 cluster meet $REDIS_NODE_IP_3 8003
+# redis-cli -h $REDIS_NODE_IP_1 -p 8001 cluster meet $REDIS_NODE_IP_2 8002
+# redis-cli -h $REDIS_NODE_IP_1 -p 8001 cluster meet $REDIS_NODE_IP_3 8003
+
+# docker run -d \
+#         --name "redis-node-1" \
+#         --net red_cluster \
+#         -v /home/mitesh/Desktop/node-redis-cluster-pubsub-client/"8001"/redis.conf:/usr/local/etc/redis/redis.conf redis redis-server /usr/local/etc/redis/redis.conf
