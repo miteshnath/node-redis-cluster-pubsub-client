@@ -15,20 +15,12 @@ function RedisClientWrapper(options) {
   }
 
   var $ = this;
-
   var nodes = options.nodes;
-
   var redisClients = [];
-
   var emitter = new EventEmitter();
-
   var subscriber = null;
-
   var nextSubscriber = null;
-
   var publisher = null;
-
-  var lastMessage = null;
 
   nodes.forEach(function (node) {
     console.log("node: ", node);
@@ -87,9 +79,6 @@ function RedisClientWrapper(options) {
     publisher = redisPub;
     if (redisPub) {
       redisPub.once("ready", function () {
-        // if (publisher && publisher.options.host !== redisPub.options.host) {
-        //   publisher = redisPub
-        // }
         publisher.publish(channel, message);
         console.log("published: ", publisher.options.host);
       });
